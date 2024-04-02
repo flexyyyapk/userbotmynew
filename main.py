@@ -95,8 +95,8 @@ print(ascii_art)
 
 print(f"{Fore.YELLOW}Код запущен, чтобы узнать команды введите .help в чате{Fore.RESET}")
 
-api_id = "25971638"
-api_hash = "4f0a42cb5a83778c46fd4d38e1a812e5"
+api_id = "your id"
+api_hash = "your hash"
 
 app = Client("NewUserBotDB", api_id=api_id, api_hash=api_hash)
 
