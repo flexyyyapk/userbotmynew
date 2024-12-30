@@ -204,24 +204,27 @@ async def update_script(_, msg: types.Message):
 
     version = __import__(f'temp.{file_name}.__init__', fromlist=['__version__'])
     
-    if version.__version__ != this_version:
-        await msg.edit('Доступное обновление найдено, установка...')
-
-        for fl_name in _file_name:
-            if fl_name == 'config.ini':
-                continue
-        
-            if fl_name == 'plugins':
-                continue
-
-            shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
-        
-        os.remove('temp/main.zip')
-        os.rmdir(file_name)
-
-        await msg.edit('Обновление успешно установлено')
-    else:
-        await msg.edit('Обновление не найдено')
+    try:
+        if version.__version__ != this_version:
+            await msg.edit('Доступное обновление найдено, установка...')
+    
+            for fl_name in _file_name:
+                if fl_name == 'config.ini':
+                    continue
+            
+                if fl_name == 'plugins':
+                    continue
+    
+                shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
+            
+            os.remove('temp/main.zip')
+            os.rmdir(file_name)
+    
+            await msg.edit('Обновление успешно установлено')
+        else:
+            await msg.edit('Обновление не найдено')
+    except Exception as e:
+        await msg.edit(f'Обновление успешно установлено\n{version.__news__}')
 
 effect = Rain('Скрипт запущен\nПриятного использования!')
 with effect.terminal_output() as terminal:
