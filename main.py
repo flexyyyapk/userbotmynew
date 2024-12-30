@@ -219,14 +219,16 @@ async def update_script(_, msg: types.Message):
                 shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
             
             os.remove('temp/main.zip')
+
+            listdir = os.listdir('temp')
+            for fil_name in listdir:
+                os.remove('temp/'+fil_name)
     
             await msg.edit('Обновление успешно установлено')
         else:
             await msg.edit('Обновление не найдено')
     except Exception as e:
         print(e)
-        os.rmdir('temp/'+file_name)
-        os.rmdir('temp/temp')
         await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode=ParseMode.HTML)
 
 effect = Rain('Скрипт запущен\nПриятного использования!')
