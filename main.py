@@ -20,6 +20,7 @@ import shutil
 import os
 import re
 from __init__ import __version__ as this_version
+from pyrogram.enums import ParseMode
 
 handling_plugins()
 
