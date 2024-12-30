@@ -19,7 +19,7 @@ import zipfile
 import shutil
 import os
 import re
-from NewUserBotV2 import __version__ as this_version
+from __init__ import __version__ as this_version
 
 handling_plugins()
 
