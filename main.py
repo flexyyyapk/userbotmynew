@@ -224,7 +224,7 @@ async def update_script(_, msg: types.Message):
         else:
             await msg.edit('Обновление не найдено')
     except Exception as e:
-        await msg.edit(f'Обновление успешно установлено\n{version.__news__}')
+        await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode='html')
 
 effect = Rain('Скрипт запущен\nПриятного использования!')
 with effect.terminal_output() as terminal:
