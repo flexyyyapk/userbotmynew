@@ -219,7 +219,7 @@ async def update_script(_, msg: types.Message):
                 shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
             
             os.remove('temp/main.zip')
-            os.rmdir('temp/'+file_name)
+            os.remove('temp/'+file_name)
             os.remove('temp/temp')
     
             await msg.edit('Обновление успешно установлено')
