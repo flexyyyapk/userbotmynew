@@ -191,12 +191,18 @@ async def update_script(_, msg: types.Message):
                 f.write(chunk)
     
     with zipfile.ZipFile(f'temp/main.zip', 'r') as zip_ref:
-        zip_ref.extractall('temp/main.zip')
+        zip_ref.extractall('temp')
     
-    file_name = os.listdir('temp')[0]
+    file_name = os.listdir('temp')
+
+    for fil_name in file_name:
+        if os.path.isdir('temp/'+fil_name):
+            file_name = fil_name
+            break
+
     _file_name = os.listdir(f'temp/{file_name}')
 
-    version = __import__(f'temp/{file_name}/_file_name')
+    version = __import__(f'temp.{file_name}.__init__', fromlist=['__version__'])
     
     if version.__version__ != this_version:
         await msg.edit('Доступное обновление найдено, установка...')
