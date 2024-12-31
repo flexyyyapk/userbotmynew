@@ -206,7 +206,7 @@ async def update_script(_, msg: types.Message):
     version = __import__(f'temp.{file_name}.__init__', fromlist=['__version__'])
     
     if version.__version__ != this_version:
-        await msg.edit('Доступное обновление найдено, установка...')
+        await msg.edit(f'Обновление найдено, версия: {version.__version__}, установка...')
 
         for fl_name in _file_name:
             if fl_name == 'config.ini':
