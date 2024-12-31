@@ -205,31 +205,35 @@ async def update_script(_, msg: types.Message):
 
     version = __import__(f'temp.{file_name}.__init__', fromlist=['__version__'])
     
-    try:
-        if version.__version__ != this_version:
-            await msg.edit('Доступное обновление найдено, установка...')
-    
-            for fl_name in _file_name:
-                if fl_name == 'config.ini':
-                    continue
-            
-                if fl_name == 'plugins':
-                    continue
-    
-                shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
-            
-            os.remove('temp/main.zip')
+    if version.__version__ != this_version:
+        await msg.edit('Доступное обновление найдено, установка...')
 
-            listdir = os.listdir('temp')
-            for fil_name in listdir:
+        for fl_name in _file_name:
+            if fl_name == 'config.ini':
+                continue
+        
+            if fl_name == 'plugins':
+                continue
+
+            #shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
+
+        listdir = os.listdir('temp')
+        for fil_name in listdir:
+            try:
+                if os.path.isdir('temp/'+fil_name):
+                    shutil.rmtree('temp/'+fil_name)
+                    continue
+
                 os.remove('temp/'+fil_name)
-    
-            await msg.edit('Обновление успешно установлено')
-        else:
-            await msg.edit('Обновление не найдено')
-    except Exception as e:
-        print(e)
-        await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode=ParseMode.HTML)
+            except OSError:
+                pass
+            
+            except Exception as e:
+                print(e)
+
+        await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode=ParseMode.MARKDOWN)
+    else:
+        await msg.edit('Обновление не найдено')
 
 effect = Rain('Скрипт запущен\nПриятного использования!')
 with effect.terminal_output() as terminal:
