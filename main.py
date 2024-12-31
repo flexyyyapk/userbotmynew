@@ -215,7 +215,7 @@ async def update_script(_, msg: types.Message):
             if fl_name == 'plugins':
                 continue
 
-            #shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
+            shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
 
         listdir = os.listdir('temp')
         for fil_name in listdir:
