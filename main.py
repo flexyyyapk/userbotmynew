@@ -1,8 +1,14 @@
+import importlib.util
 import subprocess
 import importlib
+from __init__ import __modules__
+
+if importlib.util.find_spec('alive-progress') is None:
+    subprocess.run('pip install alive-progress', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 from alive_progress import alive_it, styles
 
-for module in alive_it(['pyrogram', 'terminaltexteffects'], title='Проверка модулей', spinner=styles.SPINNERS['pulse'], theme='smooth'):
+for module in alive_it(__modules__, title='Проверка модулей', spinner=styles.SPINNERS['pulse'], theme='smooth'):
     if importlib.util.find_spec(module) is not None:
         continue
     subprocess.run(f'pip install {module}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -21,6 +27,7 @@ import os
 import re
 from __init__ import __version__ as this_version
 from pyrogram.enums import ParseMode
+from platform import python_version
 
 handling_plugins()
 
@@ -32,12 +39,16 @@ try:
    file = open("config.ini", "r").read()
    api_id = re.search('api_id\s*=\s*(\d+)', file)
    api_hash = re.search('api_hash\s*=\s*[\'"](.*?)[\'"]', file)
+   
    phone_number = re.search('phone_number\s*=\s*(\d+)', file)
    password = re.search('password\s*=\s*[\'"](.*?)[\'"]', file)
 except Exception as e:
    pass
 
-app = Client('db', api_id=api_id.group(1), api_hash=api_hash.group(1), phone_number=phone_number.group(1) if phone_number is not None else None, password=password.group(1) if password is not None else None)
+app = Client('db', api_id=api_id.group(1), api_hash=api_hash.group(1),
+             phone_number=phone_number.group(1) if phone_number is not None else None,
+             password=password.group(1) if password is not None else None
+             )
 
 async def handling_updates():
     modules = Data.modules
@@ -144,9 +155,8 @@ async def download_module(_, msg: types.Message):
         zip_ref.extractall('plugins/temp')
     
     file_name = os.listdir('plugins/temp')[0]
-    _file_name = os.listdir(f'plugins/temp/{file_name}')
 
-    for fl_name in _file_name:
+    for fl_name in os.listdir(f'plugins/temp/{file_name}'):
         shutil.move(f'plugins/temp/{file_name}/{fl_name}', f'plugins/{fl_name}')
 
     shutil.rmtree('plugins/temp')
@@ -180,10 +190,9 @@ async def remove_plugin(_, msg: types.Message):
 
 @app.on_message(filters.command('update', ['.', '/', '!']) & filters.me)
 async def update_script(_, msg: types.Message):
-
     await msg.edit('Проверка обновлений...')
     
-    #Ссылка на оффициальный источник, так что вирусов не должно быть, нужно детально проверять ссылку(так же самое и в плагинах)
+    # Ссылка на оффициальный источник, так что вирусов не должно быть, нужно детально проверять ссылку(так же самое и в плагинах)
     link = 'https://github.com/flexyyyapk/userbotmynew/archive/refs/heads/main.zip'
 
     with open(f'temp/main.zip', 'wb') as f:
@@ -202,11 +211,14 @@ async def update_script(_, msg: types.Message):
             break
 
     _file_name = os.listdir(f'temp/{file_name}')
-
-    version = __import__(f'temp.{file_name}.__init__', fromlist=['__version__'])
     
-    if version.__version__ != this_version:
+    if (version := __import__(f'temp.{file_name}.__init__', fromlist=['__version__', '__modules__'])).__version__ != this_version:
         await msg.edit(f'Обновление найдено, версия: {version.__version__}, установка...')
+
+        for module in alive_it(version.__modules__, title='Установка модулей', spinner=styles.SPINNERS['pulse'], theme='smooth'):
+            if importlib.util.find_spec(module) is not None:
+                continue
+            subprocess.run(f'pip install {module}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         for fl_name in _file_name:
             if fl_name == 'config.ini':
@@ -217,8 +229,7 @@ async def update_script(_, msg: types.Message):
 
             shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
 
-        listdir = os.listdir('temp')
-        for fil_name in listdir:
+        for fil_name in os.listdir('temp'):
             try:
                 if os.path.isdir('temp/'+fil_name):
                     shutil.rmtree('temp/'+fil_name)
