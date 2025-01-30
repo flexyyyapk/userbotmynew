@@ -4,5 +4,5 @@ __author__ = 'flexyyyapk'
 __link__ = 'https://t.me/d0br1u'
 __gitHub__ = 'https://github.com/flexyyyapk/userbotmynew'
 __news__ = '<blockquote>✨Обновление 0.0.3</blockquote>\n<blockquote>💡Что нового?</blockquote>\n<blockquote>- Улучшен скрипт🦾\n- 🔧Для разработчиков плагинов: Доступны новые декораторы для типов чата</blockquote>'
-__python__ = '>=3.8'
+__python__ = '>=3.8' # Рекомендуется предпоследняя версия
 __modules__ = ['pyrogram', 'terminaltexteffects', 'requests']
