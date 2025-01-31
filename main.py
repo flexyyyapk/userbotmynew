@@ -1,38 +1,44 @@
 import importlib.util
 import subprocess
-import importlib
+
 from __init__ import __modules__, __version__ as _version_
 
-if importlib.util.find_spec('alive-progress') is None:
-    subprocess.run('pip install alive-progress', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+if importlib.util.find_spec('alive_progress') is None:
+    subprocess.run(['pip', 'install', 'alive-progress'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 from alive_progress import alive_it, styles
 
 for module in alive_it(__modules__, title='Проверка модулей', spinner=styles.SPINNERS['pulse'], theme='smooth'):
     if importlib.util.find_spec(module) is not None:
         continue
-    subprocess.run(f'pip install {module}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+import zipfile
+import shutil
+import os
+
+import re
+import inspect
+from concurrent.futures import ThreadPoolExecutor
+
+import asyncio
+import logging
 
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
 from pyrogram import types
-from loads import Data
-from handling_plugins import handling_plugins
+
 from terminaltexteffects.effects.effect_rain import Rain
 from terminaltexteffects.effects.effect_decrypt import Decrypt, DecryptConfig
 import requests
-import zipfile
-import shutil
-import os
-import re
-from __init__ import __version__ as this_version
+
 from pyrogram.enums import ParseMode
 from platform import python_version
 from packaging import version as __version
-import inspect
-from concurrent.futures import ThreadPoolExecutor
-import asyncio
-import logging
+
+from loads import Data
+from handling_plugins import handling_plugins
+from __init__ import __version__ as this_version
 
 logging.basicConfig(filename='script.log', level=logging.DEBUG)
 
@@ -81,7 +87,8 @@ def check_updates():
 
     if version != _version_:
         DecryptConfig(50)
-        effect = Decrypt('Доступно новое обновление!')
+
+        effect = Decrypt('Доступно новое обновление!Введите в чате /update для обновления.')
         with effect.terminal_output() as terminal:
             for frame in effect:
                 terminal.print(frame)
@@ -105,7 +112,7 @@ def handling_updates():
     modules = Data.modules
     for module in alive_it(modules, title='Проверка модулей', spinner=styles.SPINNERS['pulse'], theme='smooth'):
         if importlib.util.find_spec(module) is None:
-            subprocess.run(f'pip install {module}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     updates: dict = Data.cache
 
@@ -145,7 +152,7 @@ def handling_updates():
         modules = Data.modules
         for module in alive_it(modules, title='Найден новый модуль', spinner=styles.SPINNERS['pulse'], theme='smooth'):
             if importlib.util.find_spec(module) is None:
-                subprocess.run(f'pip install {module}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 handling_updates()
 
@@ -271,10 +278,12 @@ async def update_script(_, msg: types.Message):
 
         await msg.edit(f'Обновление найдено, версия: {version.__version__}, установка...')
 
+        await asyncio.sleep(0.5)
+
         for module in alive_it(version.__modules__, title='Установка модулей', spinner=styles.SPINNERS['pulse'], theme='smooth'):
             if importlib.util.find_spec(module) is not None:
                 continue
-            subprocess.run(f'pip install {module}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         for fl_name in _file_name:
             if fl_name == 'config.ini':
@@ -298,7 +307,7 @@ async def update_script(_, msg: types.Message):
             except Exception as e:
                 print(e)
 
-        await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode=ParseMode.MARKDOWN)
+        await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode=ParseMode.HTML)
     else:
         await msg.edit('Обновление не найдено')
 
