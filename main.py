@@ -37,7 +37,7 @@ from platform import python_version
 from packaging import version as __version
 
 from loads import Data
-from handling_plugins import handling_plugins
+from handling_plugins import handling_plugins, handle_plugin
 from __init__ import __version__ as this_version
 
 logging.basicConfig(filename='script.log', level=logging.DEBUG)
@@ -86,7 +86,7 @@ def check_updates():
     version = __import__(f'temp.{file_name}.__init__', fromlist=['__version__']).__version__
 
     if version != _version_:
-        DecryptConfig(50)
+        DecryptConfig(1)
 
         effect = Decrypt('Доступно новое обновление!Введите в чате /update для обновления.')
         with effect.terminal_output() as terminal:
@@ -109,11 +109,6 @@ def check_updates():
 check_updates()
 
 def handling_updates():
-    modules = Data.modules
-    for module in alive_it(modules, title='Проверка модулей', spinner=styles.SPINNERS['pulse'], theme='smooth'):
-        if importlib.util.find_spec(module) is None:
-            subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
     updates: dict = Data.cache
 
     # Не работает!
@@ -147,12 +142,6 @@ def handling_updates():
             continue
 
         app.add_handler(MessageHandler(updates['funcs'][update]['func'], updates['funcs'][update]['filters']))
-    
-    if modules != Data.modules:
-        modules = Data.modules
-        for module in alive_it(modules, title='Найден новый модуль', spinner=styles.SPINNERS['pulse'], theme='smooth'):
-            if importlib.util.find_spec(module) is None:
-                subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 handling_updates()
 
@@ -170,7 +159,7 @@ async def help(_, msg: types.Message):
             help_text += f'{i}) <code>{plugin}</code>\n'
             i += 1
         
-        help_text += '\nЧтобы узнать о функции плагина, введите: /help {имя плагина}\nЧтобы скачать плагин, введите: /dwlmd {ссылка на гит хаб зип файл}\nЧтобы удалить плагин, введите: /rmmd {имя плагина}'
+        help_text += '\n●Чтобы узнать о функции плагина, введите: /help {имя плагина}\n●Чтобы скачать плагин, введите: /dwlmd {ссылка на гит хаб зип файл}\n●Чтобы удалить плагин, введите: /rmmd {имя плагина}\n●Чтобы обновить скрипт, введите: /update'
     elif len(msg.text.split()) == 2:
         plugin = msg.text.split()[1]
         help_text = f'Описание плагина <code>{plugin}</code>:\n{dict(Data.description[plugin].__dict__)["main_description"].description}\n\nСписок функций плагина:\n'
@@ -178,10 +167,13 @@ async def help(_, msg: types.Message):
         i = 1
         try:
             for func in dict(Data.description[plugin].__dict__.items())['args_description']:
-                help_text += f'{i}) {func.command} - {func.description}\n'
+                parameters = " ".join([" {" + parameter + "}" for parameter in func.parameters]) if func.parameters else ''
+                help_text += f'<i>{i})</i> ' + '<b>{' + f'{", ".join(func.prefixes)}' + '}</b>' + f'<code>{func.command}</code>{parameters}{func.hyphen}{func.description}\n'
                 i += 1
         except KeyError:
             help_text = 'Плагин не найден'
+        
+        help_text += '\n<b>{...}</b> - доступные префиксы'
 
     while len(help_text) > 4096:
         await app.send_message(msg.chat.id, help_text[:4096])
@@ -223,6 +215,8 @@ async def download_module(_, msg: types.Message):
 
     os.remove(f'plugins/{file_name}.zip')
 
+    handle_plugin(file_name)
+
     await app.edit_message_text(msg.chat.id, msg.id, 'Плагин успешно установлен')
 
 @app.on_message(filters.command('rmmd', ['.', '/', '!']) & filters.me)
@@ -235,7 +229,7 @@ async def remove_plugin(_, msg: types.Message):
     if plugin_name not in Data.description:
         return await app.edit_message_text(msg.chat.id, msg.id, 'Плагин не найден')
 
-    if plugin_name == 'StartedPack':
+    if plugin_name in ['StartedPack', 'AnimationPack']:
         return await app.edit_message_text(msg.chat.id, msg.id, 'Этот плагин не может быть удалён')
     
     os.remove(f'plugins/{plugin_name}')
@@ -246,7 +240,7 @@ async def remove_plugin(_, msg: types.Message):
     
     Data.description.pop(plugin_name)
 
-    await app.edit_message_text(msg.chat.id, msg.id, 'Плагин успешно удалён')
+    await app.edit_message_text(msg.chat.id, msg.id, 'Плагин успешно удалён, перезапустите скрипт, чтобы он исчез окончательно')
 
 @app.on_message(filters.command('update', ['.', '/', '!']) & filters.me)
 async def update_script(_, msg: types.Message):
@@ -287,9 +281,6 @@ async def update_script(_, msg: types.Message):
 
         for fl_name in _file_name:
             if fl_name == 'config.ini':
-                continue
-        
-            if fl_name == 'plugins':
                 continue
 
             shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')

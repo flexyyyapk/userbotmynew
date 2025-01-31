@@ -1,10 +1,25 @@
 # import redis
 # import json
-from typing import Type, Callable, Any, List
+from typing import Type, Callable, Union
 import inspect
 from pyrogram import filters
 from pyrogram.filters import command
 import os
+import importlib.util
+import subprocess
+
+__all__ = [
+    'Data',
+    'func',
+    'private_func',
+    'chat_func',
+    'channel_func',
+    'all_func',
+    'set_modules',
+    'MainDescription',
+    'FuncDescription',
+    'Description'
+]
 
 # client = redis.Redis()
 
@@ -136,6 +151,25 @@ def all_func() -> Callable:
         Data.cache['funcs'].update({func.__name__: {"func": func, "PackName": pack_name, "type": "all"}})
     return reg
 
+def set_modules(modules: list):
+    """
+    Функция для указания сторонних библиотек.
+    Вызывать перед импортами сторонних библиотек.
+    """
+
+    for indx, module in enumerate(modules.copy()):
+        if module in Data.modules:
+            try:
+                modules.pop(indx)
+            except IndexError:
+                pass
+
+    for module in modules:
+        if importlib.util.find_spec(module) is None:
+            subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    Data.modules.extend(modules)
+
 class MainDescription:
     """
     Класс для описания плагина.
@@ -147,9 +181,12 @@ class FuncDescription:
     """
     Класс для описания функций плагина.
     """
-    def __init__(self, command: str, description: str) -> None:
+    def __init__(self, command: str, description: str, hyphen: str=' - ', prefixes: Union[tuple, list]=['/'], parameters: Union[tuple, list]=[]) -> None:
         self.command = command
         self.description = description
+        self.hyphen = hyphen
+        self.prefixes = prefixes
+        self.parameters = parameters
 
 class Description:
     """

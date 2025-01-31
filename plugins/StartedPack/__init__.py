@@ -1,4 +1,7 @@
-from loads import func, MainDescription, FuncDescription, Description
+from loads import func, MainDescription, FuncDescription, Description, set_modules
+
+set_modules(['wikipedia', 'googletrans', 'gtts'])
+
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.errors import FloodWait
@@ -14,30 +17,27 @@ wikipedia.set_lang('ru')
 
 __description__ = Description(
     MainDescription("Основной плагин для работы с юзер ботом"),
-    FuncDescription('/spam {кол-во} {текст}', 'Спамит текст кол-во раз'),
-    FuncDescription('/ispam {интервал} {кол-во} {текст}', 'Спамит текст с интервалом'),
-    FuncDescription('/rd {нижняя граница} {верхняя граница}', 'Рандомно выбирает число из диапазона'),
-    FuncDescription('/rt {текст},{текст2},{текст3}', 'Рандомно выбирает текст из списка'),
-    FuncDescription('/calc {выражение}', 'Вычисляет математическое выражение'),
-    FuncDescription('/wiki {текст}', 'Ищет текст в википедии'),
-    FuncDescription('/tr {с} {на} {текст}', 'Переводит текст на выбранный язык'),
-    FuncDescription('/lg_list', 'Выводит в консоль список языков для перевода'),
-    FuncDescription('/tts {текст}', 'Преобразует текст в аудио'),
-    FuncDescription('/info', 'Выводит информацию о пользователе или чате'),
-    FuncDescription('/love', 'Выводит анимацию с сердечками'),
-    FuncDescription('/t {текст}', 'Анимация печатания в чате'),
-    FuncDescription('/proc {текст1},{текст2}', 'Анимация загрузки в чате'),
-    FuncDescription('/tanos', 'Называет все имена в группе и добавляет к ним слово "изчес"'),
-    FuncDescription('/ex', 'Показывает текст "Правда" или "Ложь"'),
-    FuncDescription('/dc', 'Выводит случайно "Чист" или "Заражён"'),
-    FuncDescription('/ghoul', 'Показывает таблицу где отнимают 7 от 1000'),
-    FuncDescription('/ocase {необязательно(кол-во прокрутки)}', 'Анимация прокрутки "кейса" в чате'),
-    FuncDescription('/clown', 'Воспроизводит анимацию, которая адресуется тем, кто позер и прочее')
+    FuncDescription('spam', 'Спамит текст кол-во раз', parameters=('кол-во', 'текст')),
+    FuncDescription('ispam', 'Спамит текст с интервалом', parameters=('интервал', 'кол-во', 'текст')),
+    FuncDescription('rd', 'Рандомно выбирает число из диапазона', parameters=('нижняя граница', 'верхняя граница')),
+    FuncDescription('rt', 'Рандомно выбирает текст из списка', parameters=('текст1', 'текст2', 'текст3')),
+    FuncDescription('calc', 'Вычисляет математическое выражение', parameters=('выражение',)),
+    FuncDescription('wiki', 'Ищет текст в википедии', parameters=('текст',)),
+    FuncDescription('tr', 'Переводит текст на выбранный язык', parameters=('с', 'на', 'текст')),
+    FuncDescription('lg_list', 'Выводит в консоль список языков для перевода'),
+    FuncDescription('tts', 'Преобразует текст в аудио', parameters=('текст',)),
+    FuncDescription('info', 'Выводит информацию о пользователе или чате'),
+    FuncDescription('love', 'Выводит анимацию с сердечками'),
+    FuncDescription('t', 'Анимация печатания в чате', parameters=('текст',)),
+    FuncDescription('proc', 'Анимация загрузки в чате', parameters=('текст1', 'текст2')),
+    FuncDescription('tanos', 'Называет все имена в группе и добавляет к ним слово "изчес"'),
+    FuncDescription('ex', 'Показывает текст "Правда" или "Ложь"'),
+    FuncDescription('dc', 'Выводит случайно "Чист" или "Заражён"'),
+    FuncDescription('ghoul', 'Показывает таблицу где отнимают 7 от 1000'),
+    FuncDescription('ocase', 'Анимация прокрутки "кейса" в чате', parameters=('необязательно(кол-во прокрутки)',)),
+    FuncDescription('clown', 'Воспроизводит анимацию, которая адресуется тем, кто позер и прочее')
 )
 #__description__ описывает плагин и его функции
-
-__modules__ = ['wikipedia', 'googletrans', 'gtts']
-#__modules__ модули которые нужно установить
 
 @func(filters.command('spam') & filters.me)
 async def spam(app: Client, msg: Message):
