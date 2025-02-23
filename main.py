@@ -380,12 +380,14 @@ async def update_script(_, msg: types.Message):
                 continue
             subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
         for fl_name in _file_name:
             if fl_name == 'config.ini':
                 continue
 
             if fl_name == 'plugins':
-                shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
+                shutil.move(f'temp/{file_name}/{fl_name}', script_dir)
 
             shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
 
@@ -405,7 +407,6 @@ async def update_script(_, msg: types.Message):
         await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode=ParseMode.HTML)
     else:
         await msg.edit('Обновление не найдено')
-
 @app.on_message()
 async def all_messages(app: Client, message: types.Message):
     with ThreadPoolExecutor(max_workers=20) as executor:
