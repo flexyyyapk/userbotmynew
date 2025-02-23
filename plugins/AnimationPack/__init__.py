@@ -6,7 +6,7 @@ import asyncio
 
 __description__ = Description(
     MainDescription('Плагин анимаций'),
-    FuncDescription('spinsq', 'анимация прокрутки коробки')
+    FuncDescription('spinsq', 'анимация прокрутки коробки', prefixes=['!', '/', '.'])
 )
 
 @func(filters.command('spinsq', ['!', '/', '.']))

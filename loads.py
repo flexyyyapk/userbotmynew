@@ -51,6 +51,8 @@ class Data:
 
     modules = []
 
+    initializations = []
+
     @classmethod
     def get_name_plugins() -> list[str]:
         return list(Data.description.keys())
@@ -151,10 +153,12 @@ def all_func() -> Callable:
         Data.cache['funcs'].update({func.__name__: {"func": func, "PackName": pack_name, "type": "all"}})
     return reg
 
-def set_modules(modules: list):
+def set_modules(modules: list) -> None:
     """
     Функция для указания сторонних библиотек.
     Вызывать перед импортами сторонних библиотек.
+    :param modules: список сторонних библиотек
+    :return: None
     """
 
     for indx, module in enumerate(modules.copy()):
@@ -182,6 +186,13 @@ class FuncDescription:
     Класс для описания функций плагина.
     """
     def __init__(self, command: str, description: str, hyphen: str=' - ', prefixes: Union[tuple, list]=['/'], parameters: Union[tuple, list]=[]) -> None:
+        """
+        `command`: команда(без префикса)
+        `description`: описание команды
+        `hyphen`: символы между команды и описания
+        `prefixes`: префиксы команды(по умолчанию /)
+        `parameters`: параметры команды
+        """
         self.command = command
         self.description = description
         self.hyphen = hyphen

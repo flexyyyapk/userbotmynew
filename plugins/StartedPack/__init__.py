@@ -1,6 +1,6 @@
-from loads import func, MainDescription, FuncDescription, Description, set_modules
+from loads import func, MainDescription, FuncDescription, Description, set_modules, private_func
 
-set_modules(['wikipedia', 'googletrans', 'gtts'])
+set_modules(['wikipedia', 'googletrans', 'gtts', 'speedtest'])
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -12,34 +12,54 @@ from googletrans import Translator, constants
 import json
 from gtts import gTTS
 from io import BytesIO
+import speedtest
+from icecream import ic
+import time
+import io
+import sys
+import traceback
+import re
 
 wikipedia.set_lang('ru')
 
 __description__ = Description(
     MainDescription("Основной плагин для работы с юзер ботом"),
-    FuncDescription('spam', 'Спамит текст кол-во раз', parameters=('кол-во', 'текст')),
-    FuncDescription('ispam', 'Спамит текст с интервалом', parameters=('интервал', 'кол-во', 'текст')),
-    FuncDescription('rd', 'Рандомно выбирает число из диапазона', parameters=('нижняя граница', 'верхняя граница')),
-    FuncDescription('rt', 'Рандомно выбирает текст из списка', parameters=('текст1', 'текст2', 'текст3')),
-    FuncDescription('calc', 'Вычисляет математическое выражение', parameters=('выражение',)),
-    FuncDescription('wiki', 'Ищет текст в википедии', parameters=('текст',)),
-    FuncDescription('tr', 'Переводит текст на выбранный язык', parameters=('с', 'на', 'текст')),
-    FuncDescription('lg_list', 'Выводит в консоль список языков для перевода'),
-    FuncDescription('tts', 'Преобразует текст в аудио', parameters=('текст',)),
-    FuncDescription('info', 'Выводит информацию о пользователе или чате'),
-    FuncDescription('love', 'Выводит анимацию с сердечками'),
-    FuncDescription('t', 'Анимация печатания в чате', parameters=('текст',)),
-    FuncDescription('proc', 'Анимация загрузки в чате', parameters=('текст1', 'текст2')),
-    FuncDescription('tanos', 'Называет все имена в группе и добавляет к ним слово "изчес"'),
-    FuncDescription('ex', 'Показывает текст "Правда" или "Ложь"'),
-    FuncDescription('dc', 'Выводит случайно "Чист" или "Заражён"'),
-    FuncDescription('ghoul', 'Показывает таблицу где отнимают 7 от 1000'),
-    FuncDescription('ocase', 'Анимация прокрутки "кейса" в чате', parameters=('необязательно(кол-во прокрутки)',)),
-    FuncDescription('clown', 'Воспроизводит анимацию, которая адресуется тем, кто позер и прочее')
+    FuncDescription('spam', 'Спамит текст кол-во раз', parameters=('кол-во', 'текст'), prefixes=['.', '!', '/']),
+    FuncDescription('ispam', 'Спамит текст с интервалом', parameters=('интервал(в секундах)', 'кол-во', 'текст'), prefixes=['.', '!', '/']),
+    FuncDescription('rd', 'Рандомно выбирает число из диапазона', parameters=('нижняя граница', 'верхняя граница'), prefixes=['.', '!', '/']),
+    FuncDescription('rt', 'Рандомно выбирает текст из списка', parameters=('текст1,тест2,тест3,и т.д'), prefixes=['.', '!', '/']),
+    FuncDescription('calc', 'Вычисляет математическое выражение', parameters=('выражение',), prefixes=['.', '!', '/']),
+    FuncDescription('wiki', 'Ищет текст в википедии', parameters=('текст',), prefixes=['.', '!', '/']),
+    FuncDescription('tr', 'Переводит текст на выбранный язык', parameters=('с', 'на', 'текст'), prefixes=['.', '!', '/']),
+    FuncDescription('lg_list', 'Выводит в консоль список языков для перевода', prefixes=['.', '!', '/']),
+    FuncDescription('tts', 'Преобразует текст в аудио', parameters=('текст',), prefixes=['.', '!', '/']),
+    FuncDescription('info', 'Выводит информацию о пользователе или чате', prefixes=['.', '!', '/']),
+    FuncDescription('love', 'Выводит анимацию с сердечками', prefixes=['.', '!', '/']),
+    FuncDescription('t', 'Анимация печатания в чате', parameters=('текст',), prefixes=['.', '!', '/']),
+    FuncDescription('proc', 'Анимация загрузки в чате', parameters=('текст1', 'текст2'), prefixes=['.', '!', '/']),
+    FuncDescription('tanos', 'Называет все имена в группе и добавляет к ним слово "изчес"', prefixes=['.', '!', '/']),
+    FuncDescription('ex', 'Показывает текст "Правда" или "Ложь"', prefixes=['.', '!', '/']),
+    FuncDescription('dc', 'Выводит случайно "Чист" или "Заражён"', prefixes=['.', '!', '/']),
+    FuncDescription('ghoul', 'Показывает таблицу где отнимают 7 от 1000', prefixes=['.', '!', '/']),
+    FuncDescription('ocase', 'Анимация прокрутки "кейса" в чате', parameters=('необязательно(кол-во прокрутки)',), prefixes=['.', '!', '/']),
+    FuncDescription('clown', 'Воспроизводит анимацию, которая адресуется тем, кто позер и прочее', prefixes=['.', '!', '/']),
+    FuncDescription('ping', 'Показывает ваш пинг и прочее данные', prefixes=['.', '!', '/']),
+    FuncDescription('code', 'Выполняет пайтон код(осторожно с кодом, иначе будут ужасные необратимые последствия)', prefixes=['.', '!', '/'], parameters=['код']),
+    FuncDescription('afk', 'включает/выключает режим афк.Когда вам напишут и будет вкл. тогда пользователю отправиться сообщение.')
 )
 #__description__ описывает плагин и его функции
 
-@func(filters.command('spam') & filters.me)
+try:
+    with open('plugins/StartedPack/settings.json') as f:
+        isAFK = json.load(f)['afk']
+except FileNotFoundError as e:
+    with open('plugins/StartedPack/settings.json', 'w') as f:
+        f.write(json.dumps({
+            'afk': False
+        }, ensure_ascii=False))
+        isAFK = False
+
+@func(filters.command('spam', prefixes=['.', '!', '/']) & filters.me)
 async def spam(app: Client, msg: Message):
     try:
         count = int(msg.text.split()[1])
@@ -47,6 +67,8 @@ async def spam(app: Client, msg: Message):
     except (ValueError, IndexError):
         return await app.edit_message_text(msg.chat.id, msg.id, 'Вы не верно ввели параметры.Пример: /spam 1 текст')
 
+    await msg.delete()
+    
     for _ in range(count):
         try:
             await app.send_message(msg.chat.id, text)
@@ -54,7 +76,7 @@ async def spam(app: Client, msg: Message):
             count += 1
             await asyncio.sleep(e.value)
 
-@func(filters.command('ispam') & filters.me)
+@func(filters.command('ispam', prefixes=['.', '!', '/']) & filters.me)
 async def interval_spam(app: Client, msg: Message):
     try:
         interval = int(msg.text.split()[1])
@@ -63,6 +85,8 @@ async def interval_spam(app: Client, msg: Message):
     except (ValueError, IndexError):
         return await app.edit_message_text(msg.chat.id, msg.id, 'Вы не верно ввели параметры.Пример: /ispam 10 1 текст')
 
+    await msg.delete()
+    
     for _ in range(count):
         try:
             await app.send_message(msg.chat.id, text)
@@ -71,7 +95,7 @@ async def interval_spam(app: Client, msg: Message):
             count += 1
             await asyncio.sleep(e.value)
 
-@func(filters.command('rd') & filters.me)
+@func(filters.command('rd', prefixes=['.', '!', '/']) & filters.me)
 async def random_digits(app: Client, msg: Message):
     try:
         value1 = int(msg.text.split()[1])
@@ -81,7 +105,7 @@ async def random_digits(app: Client, msg: Message):
     
     await app.edit_message_text(msg.chat.id, msg.id, str(random.randint(value1, value2)))
 
-@func(filters.command('rt') & filters.me)
+@func(filters.command('rt', prefixes=['.', '!', '/']) & filters.me)
 async def random_text(app: Client, msg: Message):
     try:
         texts = ' '.join(msg.text.split()[1:]).split(',')
@@ -90,7 +114,7 @@ async def random_text(app: Client, msg: Message):
 
     await app.edit_message_text(msg.chat.id, msg.id, random.choice(texts))
 
-@func(filters.command('calc') & filters.me)
+@func(filters.command('calc', prefixes=['.', '!', '/']) & filters.me)
 async def calculator(app: Client, msg: Message):
     try:
         expression = ' '.join(msg.text.split()[1:])
@@ -103,7 +127,7 @@ async def calculator(app: Client, msg: Message):
 
     await app.edit_message_text(msg.chat.id, msg.id, str(eval(expression)))
 
-@func(filters.command('wiki') & filters.me)
+@func(filters.command('wiki', prefixes=['.', '!', '/']) & filters.me)
 async def wikipedia_search(app: Client, msg: Message):
     await app.edit_message_text(msg.chat.id, msg.id, 'Поиск...')
 
@@ -122,7 +146,7 @@ async def wikipedia_search(app: Client, msg: Message):
 
     await app.edit_message_text(msg.chat.id, msg.id, result)
 
-@func(filters.command('tr') & filters.me)
+@func(filters.command('tr', prefixes=['.', '!', '/']) & filters.me)
 async def translate(app: Client, msg: Message):
     try:
         dest = msg.text.split()[1]
@@ -137,14 +161,14 @@ async def translate(app: Client, msg: Message):
     result = trans.translate(text, src, dest)
     await app.edit_message_text(msg.chat.id, msg.id, result.text)
 
-@func(filters.command('lg_list') & filters.me)
+@func(filters.command('lg_list', prefixes=['.', '!', '/']) & filters.me)
 async def language_list(app: Client, msg: Message):
 
     await app.edit_message_text(msg.chat.id, msg.id, 'Список языков выведен в терминал')
 
     print(json.dumps(constants.LANGUAGES, indent=4))
 
-@func(filters.command('tts') & filters.me)
+@func(filters.command('tts', prefixes=['.', '!', '/']) & filters.me)
 async def text_to_speech(app: Client, msg: Message):
     await app.delete_messages(msg.chat.id, msg.id)
     
@@ -163,7 +187,7 @@ async def text_to_speech(app: Client, msg: Message):
 
     await app.send_audio(msg.chat.id, audio)
 
-@func(filters.command('info') & filters.me)
+@func(filters.command('info', prefixes=['.', '!', '/']) & filters.me)
 async def info(app: Client, msg: Message):
     if msg.reply_to_message:
         user = msg.reply_to_message.from_user
@@ -172,7 +196,7 @@ async def info(app: Client, msg: Message):
     else:
         await app.edit_message_text(msg.chat.id, msg.id, f'Информация о чате:\nID: {msg.chat.id}\nТип: {msg.chat.type}')
 
-@func(filters.command('love') & filters.me)
+@func(filters.command('love', prefixes=['.', '!', '/']) & filters.me)
 async def love_animation(_, msg):
    try:
       await msg.edit("""❤️""")
@@ -417,7 +441,7 @@ async def love_animation(_, msg):
    except FloodWait as e:
       await asyncio.sleep(e.value)
 
-@func(filters.command('t') & filters.me)
+@func(filters.command('t', prefixes=['.', '!', '/']) & filters.me)
 async def type_text(app: Client, msg: Message):
     original_text=' '.join(msg.text.split()[1:])
    
@@ -437,7 +461,7 @@ async def type_text(app: Client, msg: Message):
    
     await msg.edit(text)
 
-@func(filters.command('proc') & filters.me)
+@func(filters.command('proc', prefixes=['.', '!', '/']) & filters.me)
 async def procents(app: Client, msg: Message):
     try:
         text1 = " ".join(msg.text.split(maxsplit=2)[1:]).split(",")[0]
@@ -461,7 +485,7 @@ async def procents(app: Client, msg: Message):
         
     await msg.edit(f"{text2}")
 
-@func(filters.command('tanos') & filters.me)
+@func(filters.command('tanos', prefixes=['.', '!', '/']) & filters.me)
 async def tanos(app: Client, msg: Message):
     if str(msg.chat.type) in ["ChatType.GROUP", "ChatType.SUPERGROUP"]:
         await msg.answer('*Щелчок таноса')
@@ -471,11 +495,11 @@ async def tanos(app: Client, msg: Message):
                 await msg.answer(f'*{user.user.first_name} исчез')
             except FloodWait as e:
                 await asyncio.sleep(e.value)
-@func(filters.command('ex') & filters.me)
+@func(filters.command('ex', prefixes=['.', '!', '/']) & filters.me)
 async def ex(app: Client, msg: Message):
     await msg.edit(random.choice(["Правда", "Ложь"]))
 
-@func(filters.command('dc') & filters.me)
+@func(filters.command('dc', prefixes=['.', '!', '/']) & filters.me)
 async def doctor(app: Client, msg: Message):
     await msg.edit("👨‍⚕️ Здравствуйте, я доктор Floats, сейчас я возьму у вас кровь для анализа болезни \"Кринжанутый\"💉. Пожалуйста не двигайтесь а то дам подзатылок.")
     
@@ -507,7 +531,7 @@ async def doctor(app: Client, msg: Message):
     
     await msg.edit(random.choice(["Чист", "Заражён, бегите отсюда"]))
 
-@func(filters.command('ghoul') & filters.me)
+@func(filters.command('ghoul', prefixes=['.', '!', '/']) & filters.me)
 async def ghoul_table(app: Client, msg: Message):
     row = 0
     ghoulich = 1000
@@ -531,7 +555,7 @@ async def ghoul_table(app: Client, msg: Message):
     
     await msg.edit(output)
 
-@func(filters.command('ocase') & filters.me)
+@func(filters.command('ocase', prefixes=['.', '!', '/']) & filters.me)
 async def open_case(app: Client, msg: Message):
     splited = msg.text.split()
     
@@ -598,7 +622,7 @@ async def spin_case(msg, spin=10):
     else:
         await msg.edit(f"⬜⬜⬜⬜⬜⬜🔽⬜⬜⬜⬜⬜⬜⬜\n{output}\nвам выпало: {emoji_rare.get(output[6])}")
 
-@func(filters.command('clown') & filters.me)
+@func(filters.command('clown', prefixes=['.', '!', '/']) & filters.me)
 async def clown(app: Client, msg: Message):
     await msg.edit("""🫲 😐🫱            📷""")
     await asyncio.sleep(1)
@@ -621,3 +645,83 @@ async def clown(app: Client, msg: Message):
     await msg.edit("""🫲 😐🖼️""")
     await asyncio.sleep(1)
     await msg.edit("""🫵 😐🤡""")
+
+@func(filters.command('ping', prefixes=['.', '!', '/']) & filters.me)
+async def check_ping(_, msg: Message):
+    st = speedtest.Speedtest()
+
+    await msg.edit('Подбор лучшего сервера...')
+
+    st.get_best_server()
+
+    await msg.edit(f'Пинг: {st.results.ping}ms\nСкачивание: {st.download()/1000000:.2f}mbs\nВыгрузка: {st.upload()/1000000:.2f}mbs')
+
+@func(filters.command('code', prefixes=['.', '!', '/']) & filters.me)
+async def code_runner(_, msg: Message):
+    code = msg.text.split('code ', maxsplit=1)[1].strip()
+
+    output = io.StringIO()
+    sys.stdout = output
+    sys.stderr = output
+
+    texts = ''
+    start = time.time()
+
+    try:
+        exec(code)
+    except Exception as e:
+        error_trace = traceback.format_exc()
+
+        error_trace = re.sub(r'\n\s*File ".*?", line \d+, in code_runner\n\s*exec\(code\)', '', error_trace, count=1)
+        texts += output.getvalue().strip() + '\n' + error_trace
+    finally:
+        texts += output.getvalue()
+    
+    end = abs(start - time.time())
+
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
+
+    code_slices = '\n'.join(f'{i}. {line}' for i, line in enumerate(code.split('\n'), start=1))
+    
+    await msg.edit(
+        f'```python\n{code_slices.strip()}```\n'
+        f'```bash\n{texts.strip()}```\n'
+        f'```time\n{end:.2f}с.```'
+    )
+
+@func(filters.command('afk', prefixes=['.', '!', '/']) & filters.me)
+async def afk_mode(_, msg: Message):
+    print('allloooo')
+    global isAFK
+    try:
+        with open('plugins/StartedPack/settings.json', 'r') as f:
+            settings = json.load(f)
+        
+        if settings['afk']:
+            settings['afk'] = False
+
+            await msg.edit('Вы вышли из режима афк.')
+        else:
+            settings['afk'] = True
+
+            await msg.edit('Вы вошли в режим афк.')
+        
+        isAFK = settings['afk']
+
+        with open('plugins/StartedPack/settings.json', 'w') as f:
+            f.write(json.dumps(settings, ensure_ascii=False))
+    except FileNotFoundError as e:
+        print(e)
+        with open('plugins/StartedPack/settings.json', 'w') as f:
+            f.write(json.dumps({
+                'afk': False
+            }, ensure_ascii=False))
+        
+        await msg.edit('Файл настроек не был обнаружен.Вы не в режиме афк.')
+
+@private_func()
+async def _private_func(client: Client, msg: Message):
+    print(msg)
+    if isAFK:
+        await client.send_message(msg.from_user.id, '💤Сейчас я немного занят, но скоро вернусь!\n💬Если вдруг не отвечу в течение пары часов, обязательно напишите мне ещё разок!')

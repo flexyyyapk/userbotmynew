@@ -23,8 +23,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 import asyncio
 import logging
+import random
 
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.handlers import MessageHandler
 from pyrogram import types
 
@@ -40,31 +41,43 @@ from loads import Data
 from handling_plugins import handling_plugins, handle_plugin
 from __init__ import __version__ as this_version
 
-logging.basicConfig(filename='script.log', level=logging.DEBUG)
+logging.basicConfig(filename='script.log', level=logging.WARN)
+
+# Чистка логов
+if os.path.getsize('script.log') >= 1_048_576:
+    with open('script.log', 'w') as f:
+        pass
 
 handling_plugins()
 
 registers = {"classes": {}, "funcs": {}}
-#structure
-#registers: {"classes": {{"name": {"class": classObject, "methods": [{"method_name": methodName, "filters": pyrogram.filters}]}}}, "funcs": {"name": {"func": funcObject, "filters": pyrogram.filters}}}
 
 try:
     file = open("config.ini", "r").read()
     api_id = re.search('api_id\s*=\s*(\d+)', file)
     api_hash = re.search('api_hash\s*=\s*[\'"](.*?)[\'"]', file)
+    send_msg_onstart_up = re.search('send_message\s*=\s*(true|false)', file)
+
+    if send_msg_onstart_up is not None:
+        send_msg_onstart_up = {'true': True, 'false': False}[send_msg_onstart_up.group(1)]
+    else:
+        send_msg_onstart_up = False
 
     phone_number = re.search('phone_number\s*=\s*(\d+)', file)
     password = re.search('password\s*=\s*[\'"](.*?)[\'"]', file)
 except Exception as e:
     pass
 
+there_is_update = False
+
 app = Client(
-            'db', api_id=api_id.group(1), api_hash=api_hash.group(1),
+            'db', api_id=api_id.group(1) if api_id is not None else None, api_hash=api_hash.group(1) if api_hash is not None else None,
             phone_number=phone_number.group(1) if phone_number is not None else None,
-            password=password.group(1) if password is not None else None
+            password=password.group(1) if password is not None else None, max_concurrent_transmissions=20, workers=8
             )
 
 def check_updates():
+    global there_is_update
     # Ссылка на оффициальный источник, так что вирусов не должно быть, нужно детально проверять ссылку(так же самое и в плагинах)
     link = 'https://github.com/flexyyyapk/userbotmynew/archive/refs/heads/main.zip'
 
@@ -86,12 +99,15 @@ def check_updates():
     version = __import__(f'temp.{file_name}.__init__', fromlist=['__version__']).__version__
 
     if version != _version_:
-        DecryptConfig(1)
+        if not send_msg_onstart_up:
+            DecryptConfig(1)
 
-        effect = Decrypt('Доступно новое обновление!Введите в чате /update для обновления.')
-        with effect.terminal_output() as terminal:
-            for frame in effect:
-                terminal.print(frame)
+            effect = Decrypt('Доступно новое обновление!Введите в чате /update для обновления.')
+            with effect.terminal_output() as terminal:
+                for frame in effect:
+                    terminal.print(frame)
+        else:
+            there_is_update = True
     
     for fil_name in os.listdir('temp'):
         try:
@@ -110,6 +126,10 @@ check_updates()
 
 def handling_updates():
     updates: dict = Data.cache
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        for func in Data.initializations:
+            executor.submit(func, app)
 
     # Не работает!
     # for update in updates['classes']:
@@ -154,33 +174,114 @@ async def help(_, msg: types.Message):
     if len(msg.text.split()) == 1:
         help_text = 'Список плагинов:\n'
 
-        i = 1
-        for plugin in Data.description:
-            help_text += f'{i}) <code>{plugin}</code>\n'
-            i += 1
+        for indx, plugin in enumerate(Data.description):
+            help_text += f'{indx+1}) <code>{plugin}</code>\n'
+
+            if indx >= 30:
+                break
         
-        help_text += '\n●Чтобы узнать о функции плагина, введите: /help {имя плагина}\n●Чтобы скачать плагин, введите: /dwlmd {ссылка на гит хаб зип файл}\n●Чтобы удалить плагин, введите: /rmmd {имя плагина}\n●Чтобы обновить скрипт, введите: /update'
+        pages = len(Data.description)/30
+
+        if pages > int(pages): pages = int(pages) + 1
+        
+        help_text += f'\n<b>Страница: 1/{pages}</b>' + '\n●Чтобы узнать о функции плагина, введите: /help {имя плагина}\n●Чтобы скачать плагин, введите: /dwlmd {ссылка на гит хаб зип файл}\n●Чтобы удалить плагин, введите: /rmmd {имя плагина}\n●Чтобы обновить скрипт, введите: /update\n●Чтобы переходить на страницу, введите: для плагинов: /help 2, для команд: /help имя_плагина 1'
+    elif len(msg.text.split()) == 2 and msg.text.split()[1].isdigit():
+        help_text = 'Список плагинов:\n'
+
+        try:
+            page = int(msg.text.split()[1])
+        except ValueError as e:
+            return await msg.edit('Неверный номер страницы')
+
+        pages = len(Data.description)/30
+
+        if pages > int(pages): pages = int(pages) + 1
+
+        if page > pages:
+            return await app.send_message(msg.chat.id, 'Кол-во заданных страниц выходит за границы доступного.')
+
+        for indx, plugin in enumerate(Data.description):
+            if indx < (page-1)*30:
+                continue
+
+            help_text += f'{indx+1}) <code>{plugin}</code>\n'
+
+            if indx >= page*30:
+                break
+        
+        help_text += f'\n<b>Страница: {page}/{pages}</b>' + '\n●Чтобы узнать о функции плагина, введите: /help {имя плагина}\n●Чтобы скачать плагин, введите: /dwlmd {ссылка на гит хаб зип файл}\n●Чтобы удалить плагин, введите: /rmmd {имя плагина}\n●Чтобы обновить скрипт, введите: /update\n●Чтобы переходить на страницу, введите: для плагинов: /help 2, для команд: /help имя_плагина 1'
     elif len(msg.text.split()) == 2:
         plugin = msg.text.split()[1]
-        help_text = f'Описание плагина <code>{plugin}</code>:\n{dict(Data.description[plugin].__dict__)["main_description"].description}\n\nСписок функций плагина:\n'
+        try:
+            help_text = f'Описание плагина <code>{plugin}</code>:\n{dict(Data.description[plugin].__dict__)["main_description"].description}\n\nСписок функций плагина:\n'
+        except KeyError:
+            help_text = 'Плагин не найден'
+
+        try:
+            funcs = dict(Data.description[plugin].__dict__.items())['args_description']
+        except KeyError:
+            help_text = 'Плагин не найден'
+
+        pages = len(funcs)/25
+
+        if pages > int(pages): pages = int(pages) + 1
 
         i = 1
         try:
-            for func in dict(Data.description[plugin].__dict__.items())['args_description']:
+            for func in funcs:
                 parameters = " ".join([" {" + parameter + "}" for parameter in func.parameters]) if func.parameters else ''
                 help_text += f'<i>{i})</i> ' + '<b>{' + f'{", ".join(func.prefixes)}' + '}</b>' + f'<code>{func.command}</code>{parameters}{func.hyphen}{func.description}\n'
                 i += 1
+
+                if i == 25:
+                    break
         except KeyError:
             help_text = 'Плагин не найден'
         
-        help_text += '\n<b>{...}</b> - доступные префиксы'
+        help_text += f'\n<b>Страница: 1/{pages}</b>' + '\n●Чтобы переходить на страницу, введите: для плагинов: /help 2, для команд: /help имя_плагина 1\n<b>{...}</b> - доступные префиксы'
+    elif len(msg.text.split()) == 3 and msg.text.split()[2].isdigit():
+        plugin = msg.text.split()[1]
+        try:
+            help_text = f'Описание плагина <code>{plugin}</code>:\n{dict(Data.description[plugin].__dict__)["main_description"].description}\n\nСписок функций плагина:\n'
+        except KeyError:
+            help_text = 'Плагин не найден'
 
-    while len(help_text) > 4096:
-        await app.send_message(msg.chat.id, help_text[:4096])
-        help_text = help_text[4096:]
+        try:
+            page = int(msg.text.split()[2])
+        except ValueError as e:
+            return await msg.edit('Неверный номер страницы')
+        
+        try:
+            funcs = dict(Data.description[plugin].__dict__.items())['args_description']
 
-    if help_text:
-        await app.send_message(msg.chat.id, help_text)
+            pages = len(funcs)/25
+
+            if pages > int(pages): pages = int(pages) + 1
+
+            if page > pages:
+                return await app.send_message(msg.chat.id, 'Кол-во заданных страниц выходит за границы доступного.')
+        except KeyError:
+            help_text = 'Плагин не найден'
+            pages = 0
+
+        i = 1
+        try:
+            for func in funcs:
+                if i < (page-1)*25:
+                    i += 1
+                    continue
+
+                parameters = " ".join([" {" + parameter + "}" for parameter in func.parameters]) if func.parameters else ''
+                help_text += f'<i>{i})</i> ' + '<b>{' + f'{", ".join(func.prefixes)}' + '}</b>' + f'<code>{func.command}</code>{parameters}{func.hyphen}{func.description}\n'
+                i += 1
+                if i == page*25:
+                    break
+        except KeyError:
+            help_text = 'Плагин не найден'
+        
+        help_text += f'\n<b>Страница: {page}/{pages}' + '</b>\n●Чтобы переходить на страницу, введите: для плагинов: /help 2, для команд: /help имя_плагина 1\n<b>{...}</b> - доступные префиксы'
+
+    await app.send_message(msg.chat.id, help_text)
 
 @app.on_message(filters.command('dwlmd', ['.', '/', '!']) & filters.me)
 async def download_module(_, msg: types.Message):
@@ -310,7 +411,7 @@ async def all_messages(app: Client, message: types.Message):
                 case 'default':
                     continue
                 case 'private':
-                    if str(message.chat.type) == 'ChatType.PRIVATE':
+                    if str(message.chat.type) == "ChatType.PRIVATE":
                         if inspect.iscoroutinefunction(value['func']):
                             asyncio.create_task(value['func'](app, message))
                         else:
@@ -322,7 +423,7 @@ async def all_messages(app: Client, message: types.Message):
                         else:
                             executor.submit(value['func'], app, message)
                 case 'channel':
-                    if str(message.chat.type) == 'ChatType.CHANNEL':
+                    if str(message.chat.type) == "ChatType.CHANNEL":
                         if inspect.iscoroutinefunction(value['func']):
                             asyncio.create_task(value['func'](app, message))
                         else:
@@ -333,10 +434,37 @@ async def all_messages(app: Client, message: types.Message):
                     else:
                         executor.submit(value['func'], app, message)
 
-if __name__ == '__main__':
-    effect = Rain('Скрипт запущен, подождите 5 секунд\nПриятного использования!')
-    with effect.terminal_output() as terminal:
-        for frame in effect:
-            terminal.print(frame)
+async def main():
+    if send_msg_onstart_up:
+        await app.start()
+        if there_is_update:
+            await app.send_message('me', '👍Доступно новое обновление!', entities=[types.MessageEntity(type=enums.MessageEntityType.CUSTOM_EMOJI, offset=0, length=2, custom_emoji_id=6327717992268301521)])
+        # Увы, юзерам такое отправлять нельзя(
+        msg = await app.send_message('me', '👍Юзер бот запущен', entities=[types.MessageEntity(type=enums.MessageEntityType.CUSTOM_EMOJI, offset=0, length=2, custom_emoji_id=random.choice([
+            6204226842010847828,
+            6325468301283558870,
+            6203811806436132645,
+            6206350076273494131,
+            5384064740479747298,
+            5456188142006575553,
+            5456254812783910040,
+            5244469322583120930
+        ]))])
+    
+    await asyncio.sleep(30)
 
-    app.run()
+    try:
+        await msg.delete()
+    except:
+        pass
+
+    await asyncio.Event().wait()
+
+if __name__ == '__main__':
+    if not send_msg_onstart_up:
+        effect = Rain('Скрипт запущен, подождите 5 секунд\nПриятного использования!')
+        with effect.terminal_output() as terminal:
+            for frame in effect:
+                terminal.print(frame)
+    
+    app.run(main())

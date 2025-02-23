@@ -2,7 +2,7 @@
 
 ## Начало
 
-Начнём с того, что создадим папку в файле plugins, название любое.
+Начнём с того, что создадим папку в файле plugins, название любое(главное, чтобы без пробелов).
 
 Создаём файл \_\_init\_\_.py (без \\)
 
@@ -11,8 +11,8 @@
 ## Регистрация
 
 ```python
-from loads import func
 #Декоратор для регистрации функции
+from loads import func
 from pyrogram import filters, Client, types
 
 @func(filters.command('start'))
@@ -27,8 +27,8 @@ async def test(client: Client, message: types.Message):
 Также можно указать несколько фильтров как и в pyrogram
 
 ```python
-from loads import func
 #Декоратор для регистрации функции
+from loads import func
 from pyrogram import filters, Client, types
 
 @func(filters.command('start') & filters.me)
@@ -39,9 +39,10 @@ async def test(client: Client, message: types.Message):
 ```
 
 С обновления `0.0.3` появились декораторы с помощью которых можно отслеживать приватные сообщения, сообщения из чата, сообщение из канала и все сообщения.
-Нужны они потому, что если в обычном декораторе `func()` просто ввести в параметр фильтр `filters.private` и прочее, то остальные не смогут работать как задумано.
+Нужны они потому, что если в обычном декораторе `func()` просто ввести в параметр фильтр `filters.private` и прочее, то остальные плагины не смогут работать как задумано.
 
 ```python
+#Декораторы для регистрации функций
 from loads import private_func, chat_func, channel_func, all_func
 from pyrogram import Client, types
 
@@ -60,6 +61,16 @@ async def channel_function(client: Client, message: types.Message):
 @all_func()
 async def private_function(client: Client, message: types.Message):
 	print('все сообщения')
+```
+
+Если создать синхронную функцию `initialization(client: pyrogram.Client)`, то при запуске скрипта запуститься эта функция.
+
+```python
+from pyrogram import Client
+
+def initialization(client: Client):
+	client.send_message(...)
+	# Другой код...
 ```
 
 ## Описания и модули
@@ -85,8 +96,11 @@ __description__ = Description(
 from loads import set_modules
 
 # Делать перед другими импортами
-set_modules(['модуль1', 'модуль2'])
+set_modules(['some_module1', 'some_module2'])
 # Другие импорты...
+
+import some_module1
+import some_module2
 ```
 
 ### Сторонние плагины
@@ -98,6 +112,24 @@ from loads import Data
 
 print(Data.get_name_plugins()) # ['plugin_name1', 'plugin_name2', '...']
 ```
+
+## Файл конфигураций
+
+Чтобы скрипт успешно взял ваши данные, строго следуйте инструкции.
+В корне папки создайте файл `config.ini`.
+Зайдите и введите в файл это:
+
+```bash
+api_id = 12345679
+api_hash = "..."
+phone_number = 7123456
+password = "...."
+send_message = false
+```
+
+В `api_hash` и `password` нужно чтобы справа и слева были двойные кавычки ".
+`password` не обязательно указывать, но рекомендую оставить кавычки пустыми, на пример: password = ""
+Параметр `send_message` отвечает за отправку сообщение при старте и когда есть обновление.Допустимые параметры: `true` или `false`
 
 ## Скачивания плагина и запуск
 
