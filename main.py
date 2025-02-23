@@ -387,7 +387,7 @@ async def update_script(_, msg: types.Message):
                 continue
 
             if fl_name == 'plugins':
-                shutil.copytree(f'temp/{file_name}/{fl_name}', os.path.join(script_dir, fl_name))
+                shutil.copytree(f'temp/{file_name}/{fl_name}', os.path.join(script_dir, fl_name), dirs_exist_ok=True)
                 continue
 
             shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
