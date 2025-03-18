@@ -33,6 +33,8 @@ from terminaltexteffects.effects.effect_rain import Rain
 from terminaltexteffects.effects.effect_decrypt import Decrypt, DecryptConfig
 import requests
 
+import pyfiglet
+
 from pyrogram.enums import ParseMode
 from platform import python_version
 from packaging import version as __version
@@ -78,7 +80,7 @@ app = Client(
 
 def check_updates():
     global there_is_update
-    # Ссылка на оффициальный источник, так что вирусов не должно быть, нужно детально проверять ссылку(так же самое и в плагинах)
+    # Ссылка на официальный источник, так что вирусов не должно быть, нужно детально проверять ссылку(так же самое и в плагинах)
     link = 'https://github.com/flexyyyapk/userbotmynew/archive/refs/heads/main.zip'
 
     with open(f'temp/main.zip', 'wb') as f:
@@ -123,6 +125,8 @@ def check_updates():
             print(e)
 
 check_updates()
+
+print(pyfiglet.figlet_format("ModuGram", font=random.choice(pyfiglet.FigletFont.getFonts())))
 
 def handling_updates():
     updates: dict = Data.cache
@@ -347,7 +351,7 @@ async def remove_plugin(_, msg: types.Message):
 async def update_script(_, msg: types.Message):
     await msg.edit('Проверка обновлений...')
     
-    # Ссылка на оффициальный источник, так что вирусов не должно быть, нужно детально проверять ссылку(так же самое и в плагинах)
+    # Ссылка на официальный источник, так что вирусов не должно быть, нужно детально проверять ссылку(так же самое и в плагинах)
     link = 'https://github.com/flexyyyapk/userbotmynew/archive/refs/heads/main.zip'
 
     with open(f'temp/main.zip', 'wb') as f:
@@ -408,6 +412,11 @@ async def update_script(_, msg: types.Message):
         await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode=ParseMode.HTML)
     else:
         await msg.edit('Обновление не найдено')
+
+@app.on_message(filters.command('version', ['.', '/', '!']) & filters.me)
+async def send_version(_, msg: types.Message):
+    await app.send_message(msg.chat.id, f'Обновление: {"Есть" if there_is_update else "Нету"}\nТекущая версия: {this_version}')
+
 @app.on_message()
 async def all_messages(app: Client, message: types.Message):
     with ThreadPoolExecutor(max_workers=20) as executor:

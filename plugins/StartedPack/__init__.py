@@ -19,6 +19,7 @@ import io
 import sys
 import traceback
 import re
+import ccxt
 
 wikipedia.set_lang('ru')
 
@@ -27,7 +28,7 @@ __description__ = Description(
     FuncDescription('spam', 'Спамит текст кол-во раз', parameters=('кол-во', 'текст'), prefixes=['.', '!', '/']),
     FuncDescription('ispam', 'Спамит текст с интервалом', parameters=('интервал(в секундах)', 'кол-во', 'текст'), prefixes=['.', '!', '/']),
     FuncDescription('rd', 'Рандомно выбирает число из диапазона', parameters=('нижняя граница', 'верхняя граница'), prefixes=['.', '!', '/']),
-    FuncDescription('rt', 'Рандомно выбирает текст из списка', parameters=('текст1,тест2,тест3,и т.д'), prefixes=['.', '!', '/']),
+    FuncDescription('rt', 'Рандомно выбирает текст из списка', parameters=('текст1,тест2,тест3,и т.д',), prefixes=['.', '!', '/']),
     FuncDescription('calc', 'Вычисляет математическое выражение', parameters=('выражение',), prefixes=['.', '!', '/']),
     FuncDescription('wiki', 'Ищет текст в википедии', parameters=('текст',), prefixes=['.', '!', '/']),
     FuncDescription('tr', 'Переводит текст на выбранный язык', parameters=('с', 'на', 'текст'), prefixes=['.', '!', '/']),
@@ -45,7 +46,8 @@ __description__ = Description(
     FuncDescription('clown', 'Воспроизводит анимацию, которая адресуется тем, кто позер и прочее', prefixes=['.', '!', '/']),
     FuncDescription('ping', 'Показывает ваш пинг и прочее данные', prefixes=['.', '!', '/']),
     FuncDescription('code', 'Выполняет пайтон код(осторожно с кодом, иначе будут ужасные необратимые последствия)', prefixes=['.', '!', '/'], parameters=['код']),
-    FuncDescription('afk', 'включает/выключает режим афк.Когда вам напишут и будет вкл. тогда пользователю отправиться сообщение.')
+    FuncDescription('afk', 'включает/выключает режим афк.Когда вам напишут и будет вкл. тогда пользователю отправиться сообщение.', prefixes=['.', '!', '/']),
+    FuncDescription('excrypto', 'показывает текущий указанный курс.Пример: .excrypto BTC/USDT 1', ' 💱 ', ['.', '!', '/'], ('из(крипта)/в', 'кол-во'))
 )
 #__description__ описывает плагин и его функции
 
@@ -488,11 +490,11 @@ async def procents(app: Client, msg: Message):
 @func(filters.command('tanos', prefixes=['.', '!', '/']) & filters.me)
 async def tanos(app: Client, msg: Message):
     if str(msg.chat.type) in ["ChatType.GROUP", "ChatType.SUPERGROUP"]:
-        await msg.answer('*Щелчок таноса')
+        await app.send_message(msg.chat.id, '*Щелчок таноса')
 
         async for user in app.get_chat_members(msg.chat.id):
             try:
-                await msg.answer(f'*{user.user.first_name} исчез')
+                await app.send_message(msg.chat.id, f'*{user.user.first_name} исчез')
             except FloodWait as e:
                 await asyncio.sleep(e.value)
 @func(filters.command('ex', prefixes=['.', '!', '/']) & filters.me)
@@ -692,7 +694,6 @@ async def code_runner(_, msg: Message):
 
 @func(filters.command('afk', prefixes=['.', '!', '/']) & filters.me)
 async def afk_mode(_, msg: Message):
-    print('allloooo')
     global isAFK
     try:
         with open('plugins/StartedPack/settings.json', 'r') as f:
@@ -720,8 +721,32 @@ async def afk_mode(_, msg: Message):
         
         await msg.edit('Файл настроек не был обнаружен.Вы не в режиме афк.')
 
+@func(filters.command('excrypto', ['.', '!', '/']) & filters.me)
+async def exchange_crypto(app: Client, msg: Message):
+    try:
+        await msg.delete()
+    except:
+        pass
+
+    try:
+        symbol = msg.text.split()[1]
+        if len(msg.text.split()) == 3:
+            count = int(msg.text.split()[2])
+        else: count = 1
+    except (IndexError, ValueError):
+        return await app.send_message(msg.chat.id, 'Вы не верно ввели параметр.Пример: .excrypto BTC/USDT (не обязательно{кол-во})')
+    except Exception as e:
+        return await app.send_message(msg.chat.id, e)
+
+    exchange = ccxt.binance()
+    price = exchange.fetch_ticker(symbol)['last']
+
+    if price is None:
+        return await app.send_message(msg.chat.id, 'Неизвестный курс.')
+
+    await app.send_message(msg.chat.id, f'Текущий курс: {price * count} {symbol.split("/")[1]} за {count} {symbol.split("/")[0]}')
+
 @private_func()
 async def _private_func(client: Client, msg: Message):
-    print(msg)
     if isAFK:
         await client.send_message(msg.from_user.id, '💤Сейчас я немного занят, но скоро вернусь!\n💬Если вдруг не отвечу в течение пары часов, обязательно напишите мне ещё разок!')

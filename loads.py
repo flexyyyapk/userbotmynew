@@ -1,5 +1,3 @@
-# import redis
-# import json
 from typing import Type, Callable, Union
 import inspect
 from pyrogram import filters
