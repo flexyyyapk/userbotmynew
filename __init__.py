@@ -1,5 +1,5 @@
 __name__ = 'ModuFlex'
-__version__ = '0.0.7b1'
+__version__ = '0.0.7b2'
 __author__ = 'flexyyyapk'
 __link__ = 'https://t.me/oprosmenya'
 __gitHub__ = 'https://github.com/flexyyyapk/userbotmynew'
