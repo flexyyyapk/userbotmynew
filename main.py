@@ -126,7 +126,7 @@ def check_updates():
 
 check_updates()
 
-print(pyfiglet.figlet_format("ModuGram", font=random.choice(pyfiglet.FigletFont.getFonts())))
+print(pyfiglet.figlet_format("ModuFlex", font=random.choice(pyfiglet.FigletFont.getFonts())))
 
 def handling_updates():
     updates: dict = Data.cache
