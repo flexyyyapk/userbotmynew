@@ -19,7 +19,7 @@ import io
 import sys
 import traceback
 import re
-import ccxt
+import requests
 
 wikipedia.set_lang('ru')
 
@@ -738,13 +738,15 @@ async def exchange_crypto(app: Client, msg: Message):
     except Exception as e:
         return await app.send_message(msg.chat.id, e)
 
-    exchange = ccxt.binance()
-    price = exchange.fetch_ticker(symbol)['last']
+    response = requests.get(f'https://api.binance.com/api/v3/ticker/price?symbol={"".join(symbol.split("/"))}')
+    price = response.json()
 
-    if price is None:
+    if "code" in price:
         return await app.send_message(msg.chat.id, 'Неизвестный курс.')
+    
+    price = float(price['price'])
 
-    await app.send_message(msg.chat.id, f'Текущий курс: {price * count} {symbol.split("/")[1]} за {count} {symbol.split("/")[0]}')
+    await app.send_message(msg.chat.id, f'Текущий курс: {price * count:.2f} {symbol.split("/")[1]} за {count} {symbol.split("/")[0]}')
 
 @private_func()
 async def _private_func(client: Client, msg: Message):
