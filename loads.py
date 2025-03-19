@@ -89,7 +89,8 @@ def private_func() -> Callable:
         caller_frame = frame.f_back
         caller_filename = caller_frame.f_code.co_filename
 
-        pack_name = caller_filename.split('\\')[caller_filename.split('\\').index('plugins')+1]
+        path_parts = os.path.normpath(caller_filename).split(os.sep)
+        pack_name = path_parts[path_parts.index('plugins') + 1]
 
         Data.cache['funcs'].update({func.__name__: {"func": func, "PackName": pack_name, "type": "private"}})
     return reg
@@ -108,7 +109,8 @@ def chat_func() -> Callable:
         caller_frame = frame.f_back
         caller_filename = caller_frame.f_code.co_filename
 
-        pack_name = caller_filename.split('\\')[caller_filename.split('\\').index('plugins')+1]
+        path_parts = os.path.normpath(caller_filename).split(os.sep)
+        pack_name = path_parts[path_parts.index('plugins') + 1]
 
         Data.cache['funcs'].update({func.__name__: {"func": func, "PackName": pack_name, "type": "chat"}})
     return reg
@@ -127,7 +129,8 @@ def channel_func() -> Callable:
         caller_frame = frame.f_back
         caller_filename = caller_frame.f_code.co_filename
 
-        pack_name = caller_filename.split('\\')[caller_filename.split('\\').index('plugins')+1]
+        path_parts = os.path.normpath(caller_filename).split(os.sep)
+        pack_name = path_parts[path_parts.index('plugins') + 1]
 
         Data.cache['funcs'].update({func.__name__: {"func": func, "PackName": pack_name, "type": "channel"}})
     return reg
@@ -146,7 +149,8 @@ def all_func() -> Callable:
         caller_frame = frame.f_back
         caller_filename = caller_frame.f_code.co_filename
 
-        pack_name = caller_filename.split('\\')[caller_filename.split('\\').index('plugins')+1]
+        path_parts = os.path.normpath(caller_filename).split(os.sep)
+        pack_name = path_parts[path_parts.index('plugins') + 1]
 
         Data.cache['funcs'].update({func.__name__: {"func": func, "PackName": pack_name, "type": "all"}})
     return reg

@@ -2,6 +2,7 @@ import os
 from loads import Data, Description
 from concurrent.futures import ThreadPoolExecutor
 import inspect
+import traceback
 
 def handling_plugins():
     try:
@@ -26,7 +27,7 @@ def handling_plugins():
                     
                     Data.initializations.append(dict(md.__dict__.items())[folder].initialization)
     except Exception as e:
-        print(e)
+        traceback.print_exc()
 
 def handle_plugin(pack_name: str):
     try:
@@ -46,4 +47,4 @@ def handle_plugin(pack_name: str):
             
             Data.initializations.append(dict(md.__dict__.items())[pack_name].initialization)
     except Exception as e:
-        print(e)
+        traceback.print_exc()
