@@ -12,7 +12,7 @@ while retries < max_retries:
         from main import app, main
         app.run(main(retries))
         subprocess.Popen([sys.executable] + sys.argv)
-        exit()
+        sys.exit()
     except KeyboardInterrupt:
         print('<3')
         break
