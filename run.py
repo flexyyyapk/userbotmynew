@@ -1,17 +1,24 @@
-from main import app, main
+import asyncio
 from time import sleep
+import sys
+import subprocess
 
-max_retries = 10 # Кол-во попыток
-retry_delay = 15 # В секундах
+max_retries = 10
+retry_delay = 15
 retries = 0
 
 while retries < max_retries:
     try:
+        from main import app, main
         app.run(main(retries))
+        subprocess.Popen([sys.executable] + sys.argv)
+        exit()
     except KeyboardInterrupt:
         print('<3')
         break
-    except (ConnectionError, TimeoutError):
+
+    except (ConnectionError, TimeoutError) as e:
+        print(e)
         print('Ошибка с соединением...')
         sleep(retry_delay)
 

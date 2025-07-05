@@ -26,6 +26,7 @@ import random
 
 import sys
 from typing import Type
+import time
 
 from pyrogram import Client, filters, enums
 from pyrogram.handlers import MessageHandler
@@ -42,7 +43,7 @@ from platform import python_version
 from packaging import version as __version
 
 from loads import Data
-from handling_plugins import handling_plugins, handle_plugin
+from handling_plugins import handling_plugins as handling_plg, handle_plugin
 from __init__ import __version__ as this_version
 
 logging.basicConfig(filename='script.log', level=logging.WARN)
@@ -52,7 +53,7 @@ if os.path.getsize('script.log') >= 1_048_576:
     with open('script.log', 'w') as f:
         pass
 
-handling_plugins()
+handling_plg()
 
 registers = {}
 
@@ -73,6 +74,7 @@ except Exception as e:
     pass
 
 there_is_update = False
+stop = False
 
 app = Client(
             'db', api_id=api_id.group(1) if api_id is not None else None, api_hash=api_hash.group(1) if api_hash is not None else None,
@@ -311,6 +313,8 @@ async def download_module(_, msg: types.Message):
 
 @app.on_message(filters.command('rmmd', ['.', '/', '!']) & filters.me)
 async def remove_plugin(_, msg: types.Message):
+    
+
     try:
         plugin_name = msg.text.split()[1]
     except IndexError:
@@ -334,12 +338,12 @@ async def remove_plugin(_, msg: types.Message):
 
     await asyncio.sleep(1)
 
-    subprocess.run([sys.executable] + sys.argv)
-
-    exit()
+    stop = True
 
 @app.on_message(filters.command('update', ['.', '/', '!']) & filters.me)
 async def update_script(_, msg: types.Message):
+    global stop
+
     await msg.edit('Проверка обновлений...')
     
     # Ссылка на официальный источник, так что вирусов не должно быть, нужно детально проверять ссылку(так же самое и в плагинах)
@@ -385,7 +389,15 @@ async def update_script(_, msg: types.Message):
                 shutil.copytree(f'temp/{file_name}/{fl_name}', os.path.join(script_dir, fl_name), dirs_exist_ok=True)
                 continue
 
-            shutil.move(f'temp/{file_name}/{fl_name}', f'{fl_name}')
+            if os.path.isfile(f'temp/{file_name}/{fl_name}') and os.path.exists(f'{os.path.split(__file__)[0]}/{fl_name}'):
+                os.remove(f'{os.path.split(__file__)[0]}/{fl_name}')
+            
+            if fl_name == 'temp':
+                continue
+
+            print(f'temp/{file_name}/{fl_name}', f'{os.path.split(__file__)[0]}')
+            
+            shutil.move(f'temp/{file_name}/{fl_name}', f'{os.path.split(__file__)[0]}')
 
         for fil_name in os.listdir('temp'):
             try:
@@ -402,9 +414,7 @@ async def update_script(_, msg: types.Message):
 
         await msg.edit(f'Обновление успешно установлено\n{version.__news__}\nПерезапуск скрипта...', parse_mode=ParseMode.MARKDOWN)
 
-        subprocess.run([sys.executable] + sys.argv)
-
-        exit()
+        stop = True
     else:
         await msg.edit('Обновление не найдено')
 
@@ -434,6 +444,8 @@ async def send_update_function(app: Client, message: types.Message):
                         executor.submit(_func['func'], app, message)
 
 async def main(retries: int=None):
+    global stop
+
     if send_msg_onstart_up:
         await app.start()
         if there_is_update:
@@ -450,16 +462,21 @@ async def main(retries: int=None):
             5244469322583120930
         ]))])
     
-    await asyncio.sleep(15)
-
-    try:
-        await msg.delete()
-    except:
-        pass
+    start = time.time()
 
     if retries != None: retries -= 1
 
-    await asyncio.Event().wait()
+    while not stop:
+        await asyncio.sleep(1)
+
+        if start is not None:
+            if time.time() - start > 15:
+                try:
+                    await msg.delete()
+                except:
+                    pass
+                finally:
+                    start = None
 
 if not send_msg_onstart_up:
     effect = Rain('Скрипт запущен, подождите 5 секунд\nПриятного использования!')
