@@ -15,7 +15,7 @@
 
 О том, как получить **api_id и api_hash** вы можете узнать [в этой статье](https://teletype.in/@sakurahost/GetApi)
 
-Запускать файл main.py
+Запускать файл run.py
 
 > Контрибьюция
 
