@@ -9,9 +9,8 @@ if importlib.util.find_spec('alive_progress') is None:
 from alive_progress import alive_it, styles
 
 for module in alive_it(__modules__, title='Проверка модулей', spinner=styles.SPINNERS['pulse'], theme='smooth'):
-    if importlib.util.find_spec(module) is not None:
-        continue
-    subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if importlib.util.find_spec(module) is None:
+        subprocess.run(['pip', 'install', module], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 import zipfile
 import shutil
@@ -24,6 +23,9 @@ from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import logging
 import random
+
+import sys
+from typing import Type
 
 from pyrogram import Client, filters, enums
 from pyrogram.handlers import MessageHandler
@@ -52,7 +54,7 @@ if os.path.getsize('script.log') >= 1_048_576:
 
 handling_plugins()
 
-registers = {"classes": {}, "funcs": {}}
+registers = {}
 
 try:
     file = open("config.ini", "r").read()
@@ -135,37 +137,20 @@ def handling_updates():
         for func in Data.initializations:
             executor.submit(func, app)
 
-    # Не работает!
-    # for update in updates['classes']:
-    #     if update in registers['classes']:
-    #         _method_name = updates['classes'][update][0]['method_name']
-    #         command = updates['classes'][update]['command']
-    #         for _methods in registers['classes'][update]['methods']:
-    #             if _methods['method_name'] == _method_name:
-    #                 break
-    #         else:
-    #             registers['classes'][update]['methods'].append({"method_name": _method_name, "command": command})
-    #             continue
+    for update in updates:
+        if not registers.get(update, False):
+            registers.update({update: {"funcs": {}, "classes": {}}})
 
-    #     _class = updates['classes'][update]['class']
-    #     _method_name = updates['classes'][update]['method_name']
-    #     command = updates['classes'][update]['command']
+        for func_name, _func in updates[update]['funcs'].items():
+            if registers[update]['funcs'].get(func_name, False):
+                continue
+            
+            registers[update]['funcs'].update({func_name: _func['func']})
 
-    #     _handle = getattr(_class, _method_name, None)
-    #     if _handle is not None:
-    #         registers['classes'].update(updates['classes'])
-    #         app.add_handler(MessageHandler(_handle, filters.command(command)))
+            if _func['type'] != 'default':
+                continue
 
-    for update in updates['funcs']:
-        if registers['funcs'].get(update, False):
-            continue
-        
-        registers['funcs'].update({update: updates['funcs'][update]})
-
-        if updates['funcs'][update]['type'] != 'default':
-            continue
-
-        app.add_handler(MessageHandler(updates['funcs'][update]['func'], updates['funcs'][update]['filters']))
+            app.add_handler(MessageHandler(_func['func'], _func['filters']))
 
 handling_updates()
 
@@ -345,7 +330,13 @@ async def remove_plugin(_, msg: types.Message):
     
     Data.description.pop(plugin_name)
 
-    await app.edit_message_text(msg.chat.id, msg.id, 'Плагин успешно удалён, перезапустите скрипт, чтобы он исчез окончательно')
+    await app.edit_message_text(msg.chat.id, msg.id, 'Плагин успешно удалён, происходит перезапуск скрипта.')
+
+    await asyncio.sleep(1)
+
+    subprocess.run([sys.executable] + sys.argv)
+
+    exit()
 
 @app.on_message(filters.command('update', ['.', '/', '!']) & filters.me)
 async def update_script(_, msg: types.Message):
@@ -409,7 +400,11 @@ async def update_script(_, msg: types.Message):
             except Exception as e:
                 print(e)
 
-        await msg.edit(f'Обновление успешно установлено\n{version.__news__}', parse_mode=ParseMode.HTML)
+        await msg.edit(f'Обновление успешно установлено\n{version.__news__}\nПерезапуск скрипта...', parse_mode=ParseMode.MARKDOWN)
+
+        subprocess.run([sys.executable] + sys.argv)
+
+        exit()
     else:
         await msg.edit('Обновление не найдено')
 
@@ -419,36 +414,26 @@ async def send_version(_, msg: types.Message):
 
 @app.on_message()
 async def all_messages(app: Client, message: types.Message):
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        for _func, value in Data.cache['funcs'].items():
-            match value['type']:
-                case 'default':
-                    continue
-                case 'private':
-                    if str(message.chat.type) == "ChatType.PRIVATE":
-                        if inspect.iscoroutinefunction(value['func']):
-                            asyncio.create_task(value['func'](app, message))
-                        else:
-                            executor.submit(value['func'], app, message)
-                case 'chat':
-                    if str(message.chat.type) in ['ChatType.GROUP', 'ChatType.SUPERGROUP']:
-                        if inspect.iscoroutinefunction(value['func']):
-                            asyncio.create_task(value['func'](app, message))
-                        else:
-                            executor.submit(value['func'], app, message)
-                case 'channel':
-                    if str(message.chat.type) == "ChatType.CHANNEL":
-                        if inspect.iscoroutinefunction(value['func']):
-                            asyncio.create_task(value['func'](app, message))
-                        else:
-                            executor.submit(value['func'], app, message)
-                case 'all':
-                    if inspect.iscoroutinefunction(value['func']):
-                        asyncio.create_task(value['func'](app, message))
-                    else:
-                        executor.submit(value['func'], app, message)
+    asyncio.gather(send_update_function(app, message))
 
-async def main():
+async def send_update_function(app: Client, message: types.Message):
+    with ThreadPoolExecutor(20) as executor:
+        for pack_name in Data.cache:
+            for func_name, _func in Data.cache[pack_name]['funcs'].items():
+                chat_types = {
+                        "ChatType.PRIVATE": "private",
+                        "ChatType.CHANNEL": "channel",
+                        "ChatType.GROUP": "chat",
+                        "ChatType.SUPERGROUP": "chat"
+                    }
+                
+                if _func['type'] == chat_types[str(message.chat.type)] or _func['type'] == 'all':
+                    if inspect.iscoroutinefunction(_func['func']):
+                        asyncio.create_task(_func['func'](app, message))
+                    else:
+                        executor.submit(_func['func'], app, message)
+
+async def main(retries: int=None):
     if send_msg_onstart_up:
         await app.start()
         if there_is_update:
@@ -465,20 +450,19 @@ async def main():
             5244469322583120930
         ]))])
     
-    await asyncio.sleep(30)
+    await asyncio.sleep(15)
 
     try:
         await msg.delete()
     except:
         pass
 
+    if retries != None: retries -= 1
+
     await asyncio.Event().wait()
 
-if __name__ == '__main__':
-    if not send_msg_onstart_up:
-        effect = Rain('Скрипт запущен, подождите 5 секунд\nПриятного использования!')
-        with effect.terminal_output() as terminal:
-            for frame in effect:
-                terminal.print(frame)
-    
-    app.run(main())
+if not send_msg_onstart_up:
+    effect = Rain('Скрипт запущен, подождите 5 секунд\nПриятного использования!')
+    with effect.terminal_output() as terminal:
+        for frame in effect:
+            terminal.print(frame)

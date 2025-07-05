@@ -15,7 +15,7 @@
 from loads import func
 from pyrogram import filters, Client, types
 
-@func(filters.command('start'))
+@func(filters.command('test'))
 async def test(client: Client, message: types.Message):
 	#client: объект класса pyrogram.Client
 	#message: объект класса pyrogram.types.Message
@@ -31,7 +31,7 @@ async def test(client: Client, message: types.Message):
 from loads import func
 from pyrogram import filters, Client, types
 
-@func(filters.command('start') & filters.me)
+@func(filters.command('test') & filters.me)
 async def test(client: Client, message: types.Message):
 	#client: объект класса pyrogram.Client
 	#message: объект класса pyrogram.types.Message
@@ -82,7 +82,7 @@ from loads import func, Description, MainDescription, FuncDescription
 
 __description__ = Description(
 	MainDescription('Описания плагина'),
-	FuncDescription('команда', 'описание команды'),
+	FuncDescription('команда', 'описание команды', parameters=('параметр1', 'параметр2'), prefixes=('/',)),
 	FuncDescription('...', '...')
 )
 
@@ -133,7 +133,7 @@ send_message = false
 
 ## Скачивания плагина и запуск
 
-Чтобы скачать плагин, вам нужно **запустить юзер бота, т.е файл main.py.**
+Чтобы скачать плагин, вам нужно **запустить юзер бота, т.е файл run.py.**
 
 Обязательно введите данные от вашего аккаунта в файл config.ini
 

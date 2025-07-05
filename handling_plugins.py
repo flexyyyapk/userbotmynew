@@ -1,8 +1,10 @@
 import os
 from loads import Data, Description
-from concurrent.futures import ThreadPoolExecutor
 import inspect
 import traceback
+import logging
+
+logging.basicConfig(filename='script.log', level=logging.WARN)
 
 def handling_plugins():
     try:
@@ -11,6 +13,13 @@ def handling_plugins():
         for folder in folders:
             init_file = os.path.join('plugins', folder, '__init__.py')
             if os.path.exists(init_file):
+                Data.cache.update({
+                    folder: {
+                        "funcs": {},
+                        "classes": {}
+                    }
+                                })
+
                 md = __import__('plugins.' + folder + '.__init__')
 
                 if hasattr(dict(md.__dict__.items())[folder], '__description__'):
@@ -28,9 +37,17 @@ def handling_plugins():
                     Data.initializations.append(dict(md.__dict__.items())[folder].initialization)
     except Exception as e:
         traceback.print_exc()
+        logging.warn(traceback.format_exc())
 
 def handle_plugin(pack_name: str):
     try:
+        Data.cache.update({
+            pack_name: {
+                "funcs": {},
+                "classes": {}
+            }
+                        })
+        
         md = __import__('pluging.' + pack_name + '.__init__.py')
 
         if hasattr(dict(md.__dict__.items())[pack_name], '__description__'):
@@ -48,3 +65,4 @@ def handle_plugin(pack_name: str):
             Data.initializations.append(dict(md.__dict__.items())[pack_name].initialization)
     except Exception as e:
         traceback.print_exc()
+        logging.warn(traceback.format_exc())
