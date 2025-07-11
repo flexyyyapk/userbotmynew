@@ -6,7 +6,6 @@ import importlib.util
 import subprocess
 import logging
 import traceback
-from icecream import ic
 
 logging.basicConfig(filename='script.log', level=logging.WARN)
 
