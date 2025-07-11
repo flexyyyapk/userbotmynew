@@ -24,7 +24,6 @@ import asyncio
 import logging
 import random
 
-import sys
 from typing import Type
 import time
 
@@ -53,8 +52,6 @@ if os.path.getsize('script.log') >= 1_048_576:
     with open('script.log', 'w') as f:
         pass
 
-handling_plg()
-
 registers = {}
 
 try:
@@ -76,11 +73,7 @@ except Exception as e:
 there_is_update = False
 stop = False
 
-app = Client(
-            'db', api_id=api_id.group(1) if api_id is not None else None, api_hash=api_hash.group(1) if api_hash is not None else None,
-            phone_number=phone_number.group(1) if phone_number is not None else None,
-            password=password.group(1) if password is not None else None, max_concurrent_transmissions=20, workers=8
-            )
+app = None
 
 def check_updates():
     global there_is_update
@@ -128,10 +121,6 @@ def check_updates():
         except Exception as e:
             print(e)
 
-check_updates()
-
-print(pyfiglet.figlet_format("ModuFlex", font=random.choice(pyfiglet.FigletFont.getFonts())))
-
 def handling_updates():
     updates: dict = Data.cache
 
@@ -154,9 +143,6 @@ def handling_updates():
 
             app.add_handler(MessageHandler(_func['func'], _func['filters']))
 
-handling_updates()
-
-@app.on_message(filters.command('help', ['.', '/', '!']) & filters.me)
 async def help(_, msg: types.Message):
     help_text = ''
 
@@ -274,7 +260,6 @@ async def help(_, msg: types.Message):
 
     await app.send_message(msg.chat.id, help_text)
 
-@app.on_message(filters.command('dwlmd', ['.', '/', '!']) & filters.me)
 async def download_module(_, msg: types.Message):
     await app.edit_message_text(msg.chat.id, msg.id, 'Загрузка...')
 
@@ -311,7 +296,6 @@ async def download_module(_, msg: types.Message):
 
     await app.edit_message_text(msg.chat.id, msg.id, 'Плагин успешно установлен')
 
-@app.on_message(filters.command('rmmd', ['.', '/', '!']) & filters.me)
 async def remove_plugin(_, msg: types.Message):
     
 
@@ -340,7 +324,6 @@ async def remove_plugin(_, msg: types.Message):
 
     stop = True
 
-@app.on_message(filters.command('update', ['.', '/', '!']) & filters.me)
 async def update_script(_, msg: types.Message):
     global stop
 
@@ -418,11 +401,13 @@ async def update_script(_, msg: types.Message):
     else:
         await msg.edit('Обновление не найдено')
 
-@app.on_message(filters.command('version', ['.', '/', '!']) & filters.me)
 async def send_version(_, msg: types.Message):
     await app.send_message(msg.chat.id, f'Обновление: {"Есть" if there_is_update else "Нету"}\nТекущая версия: {this_version}')
 
-@app.on_message()
+async def stoppp(_, __):
+    global stop
+    stop = True
+
 async def all_messages(app: Client, message: types.Message):
     asyncio.gather(send_update_function(app, message))
 
@@ -443,11 +428,28 @@ async def send_update_function(app: Client, message: types.Message):
                     else:
                         executor.submit(_func['func'], app, message)
 
-async def main(retries: int=None):
-    global stop
+async def main(_app: Client, retries: int=None):
+    global stop, app
+
+    app = _app
+    
+    check_updates()
+    
+    handling_plg()
+
+    handling_updates()
+    
+    app.add_handler(MessageHandler(help, filters.command('help', ['.', '/', '!']) & filters.me))
+    app.add_handler(MessageHandler(download_module, filters.command('dwlmd', ['.', '/', '!']) & filters.me))
+    app.add_handler(MessageHandler(remove_plugin, filters.command('rmmd', ['.', '/', '!']) & filters.me))
+    app.add_handler(MessageHandler(update_script, filters.command('update', ['.', '/', '!']) & filters.me))
+    app.add_handler(MessageHandler(send_version, filters.command('version', ['.', '/', '!']) & filters.me))
+    app.add_handler(MessageHandler(stoppp, filters.command('stop', ['.', '/', '!']) & filters.me))
+    app.add_handler(MessageHandler(all_messages))
+
+    print(pyfiglet.figlet_format("ModuFlex", font=random.choice(pyfiglet.FigletFont.getFonts())))
 
     if send_msg_onstart_up:
-        await app.start()
         if there_is_update:
             await app.send_message('me', '👍Доступно новое обновление!', entities=[types.MessageEntity(type=enums.MessageEntityType.CUSTOM_EMOJI, offset=0, length=2, custom_emoji_id=6327717992268301521)])
         # Увы, юзерам такое отправлять нельзя(
